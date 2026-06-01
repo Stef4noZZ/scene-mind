@@ -2,12 +2,14 @@ import os
 
 import openai
 
+DEFAULT_OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+
 
 def _get_api_key():
     return os.getenv('OPENAI_API_KEY')
 
 
-def ask_openai(prompt, model='gpt-3.5-turbo', max_tokens=250, temperature=0.7):
+def ask_openai(prompt, model=None, max_tokens=250, temperature=0.7):
     api_key = _get_api_key()
     if not api_key:
         raise ValueError(
@@ -15,6 +17,7 @@ def ask_openai(prompt, model='gpt-3.5-turbo', max_tokens=250, temperature=0.7):
         )
 
     openai.api_key = api_key
+    model = model or DEFAULT_OPENAI_MODEL
 
     response = openai.ChatCompletion.create(
         model=model,

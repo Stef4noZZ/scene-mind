@@ -1,10 +1,12 @@
+import json
+
 from django.contrib import messages
 from django.shortcuts import render
+from django.utils.safestring import mark_safe
 
 from .forms import QuestionForm
+from .model_viewer import get_model_viewer_models, get_default_model_viewer_key
 from .openai_service import ask_openai
-
-# gpt3_models.gpt3_question_and_answer()
 
 def index(request):
     answer = None
@@ -20,4 +22,15 @@ def index(request):
         else:
             messages.error(request, 'Please enter a valid question.')
 
-    return render(request, 'index.html', {'form': form, 'answer': answer})
+    model_viewer_models = get_model_viewer_models()
+    return render(
+        request,
+        'index.html',
+        {
+            'form': form,
+            'answer': answer,
+            'models': model_viewer_models,
+            'models_json': mark_safe(json.dumps(model_viewer_models)),
+            'default_model': get_default_model_viewer_key(),
+        },
+    )

@@ -3,7 +3,7 @@ from django import forms
 
 class QuestionForm(forms.Form):
     prompt = forms.CharField(
-        label='Ask Angelica',
+        label='Ask the AI assistant',
         widget=forms.Textarea(
             attrs={
                 'class': 'form-control',

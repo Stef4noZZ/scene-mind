@@ -4,7 +4,9 @@ config_api_keys.py
 .env
 .venv/
 __pycache__/
+**/__pycache__/
 *.pyc
+**/*.pyc
 db.sqlite3
 trial.mp3
-.idea
+.idea/

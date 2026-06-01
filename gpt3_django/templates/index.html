@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Angelica Project{% endblock %}
+{% block title %}SceneMind{% endblock %}
 
 {% block content %}
 <div class="row gy-4">
     <div class="col-lg-5">
         <div class="card p-4 shadow-sm">
-            <h2 class="h4 mb-3">Ask Angelica</h2>
+            <h2 class="h4 mb-3">Ask the AI Assistant</h2>
             <p class="text-muted">Enter a question for the OpenAI assistant and get a conversational answer.</p>
 
             <form method="post" novalidate>
@@ -31,24 +31,32 @@
         <div class="card p-3 shadow-sm">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
-                    <h2 class="h4 mb-1">Angelica 3D Experience</h2>
+                    <h2 class="h4 mb-1">3D Model Explorer</h2>
                     <p class="text-muted mb-0">Explore the integrated model viewer with local Three.js support.</p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <label for="model-selector" class="text-white-50 mb-0">Model</label>
                     <select id="model-selector" class="form-select form-select-sm" style="min-width: 150px;">
-                        <option value="angelica">Angelica</option>
-                        <option value="fem_head">Fem Head</option>
-                        <option value="fem_face">Fem Face</option>
-                        <option value="wraith">Wraith</option>
+                        {% for model in models %}
+                            <option value="{{ model.key }}"{% if model.key == default_model %} selected{% endif %}>{{ model.label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
-            <div class="mb-3 text-white-50 small">Active model: <span id="model-name">Angelica</span></div>
+            {% for model in models %}
+                {% if model.key == default_model %}
+                    <div class="mb-2 text-white-50 small">Active model: <span id="model-name">{{ model.label }}</span></div>
+                    <div class="mb-3 text-white-50 small" id="model-description">{{ model.description }}</div>
+                {% endif %}
+            {% endfor %}
             <canvas class="webgl" id="angelica-canvas" style="min-height: 450px;"></canvas>
         </div>
     </div>
 </div>
 
+<script>
+    window.SCENE_MIND_MODELS = {{ models_json }};
+    window.SCENE_MIND_DEFAULT_MODEL = "{{ default_model }}";
+</script>
 <script type="module" src="{% static 'rendering_angelica/index.js' %}"></script>
 {% endblock content %}
