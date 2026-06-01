@@ -1,0 +1,53 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rendering_angelica</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+            color: #eee;
+            font-family: system-ui, sans-serif;
+        }
+
+        .webgl {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .overlay {
+            position: absolute;
+            left: 14px;
+            top: 14px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.55);
+            color: #eef;
+            padding: 12px 14px;
+            border-radius: 12px;
+            max-width: 320px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
+        }
+
+        .overlay strong {
+            color: #7ce;
+        }
+    </style>
+</head>
+<body>
+    <canvas class="webgl"></canvas>
+    <div class="overlay">
+        <strong>rendering_angelica</strong><br>
+        Use mouse drag / wheel to orbit, pan, and zoom.<br>
+        Double-click the viewport for fullscreen.<br>
+        Default model: <span id="model-name">fem_head</span><br>
+        Loaded from the local <code>assets/</code> folder.
+    </div>
+    <script type="module" src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+Model Information:
+* title:	female face model - fine topology, with eyeballs
+* source:	https://sketchfab.com/3d-models/female-face-model-fine-topology-with-eyeballs-c1021efd444a42f0899ffdfc0367333b
+* author:	zacko (https://sketchfab.com/zacko)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "female face model - fine topology, with eyeballs" (https://sketchfab.com/3d-models/female-face-model-fine-topology-with-eyeballs-c1021efd444a42f0899ffdfc0367333b) by zacko (https://sketchfab.com/zacko) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
