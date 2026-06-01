@@ -35,5 +35,3 @@ def get_model_viewer_models():
 def get_default_model_viewer_key():
     valid_keys = {model['key'] for model in MODEL_VIEWER_MODELS}
     return DEFAULT_MODEL_VIEWER_KEY if DEFAULT_MODEL_VIEWER_KEY in valid_keys else MODEL_VIEWER_MODELS[0]['key']
-
-

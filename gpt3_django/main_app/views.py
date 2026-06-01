@@ -5,7 +5,7 @@ from django.shortcuts import render
 from django.utils.safestring import mark_safe
 
 from .forms import QuestionForm
-from .model_viewer import get_model_viewer_models, get_default_model_viewer_key
+from viewer.model_viewer import get_model_viewer_models, get_default_model_viewer_key
 from .openai_service import ask_openai
 
 def index(request):
