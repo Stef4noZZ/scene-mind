@@ -104,6 +104,12 @@ function updateModelInfo(modelKey) {
   if (modelDescriptionElement) {
     modelDescriptionElement.textContent = model ? model.description : '';
   }
+  // Tell the chat client which character is active so it can pick a matching
+  // (female/male) set of TTS voices.
+  window.SCENE_MIND_CURRENT_MODEL = model || null;
+  window.dispatchEvent(new CustomEvent('scene-mind:model', {
+    detail: { key: modelKey, gender: (model && model.gender) || '' },
+  }));
 }
 
 function loadModel(modelKey) {
