@@ -1,3 +1,5 @@
 Django>=4.2,<5
-openai>=0.28.0
+# Modern OpenAI SDK (>=1.0). The same client talks to any OpenAI-compatible
+# endpoint (OpenAI, Google Gemini, Ollama, Groq, OpenRouter) via base_url.
+openai>=1.0
 python-dotenv>=1.0.0
