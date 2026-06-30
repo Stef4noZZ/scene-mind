@@ -27,7 +27,7 @@ a real key in `.env` to light up OpenAI, Google Gemini, or a local Ollama.
 - **Multi-model compare** — ask one question across several providers/models
   at once and see the answers side by side with per-model latency.
 - **Auto-discovered 3D models** — drop a folder with a `.gltf`/`.glb` under
-  `static/rendering_angelica/assets/<name>/` and it appears in the viewer.
+  `static/scene/assets/<name>/` and it appears in the viewer.
 - **Tested** — provider registry, mock provider, API endpoints, and model
   discovery are covered by Django tests.
 
