@@ -18,6 +18,10 @@ a real key in `.env` to light up OpenAI, Google Gemini, or a local Ollama.
   tests run end-to-end with no credentials.
 - **AJAX chat with session memory** — no full-page reloads; recent turns are
   remembered per session.
+- **Talking + listening avatar** — replies are spoken aloud (text-to-speech)
+  and a mic button accepts voice questions (speech-to-text), with the 3D model
+  animating while it speaks. Uses the browser Web Speech API (no keys); best in
+  Chrome/Edge, served over `localhost` or HTTPS for mic access.
 - **Auto-discovered 3D models** — drop a folder with a `.gltf`/`.glb` under
   `static/rendering_angelica/assets/<name>/` and it appears in the viewer.
 - **Tested** — provider registry, mock provider, API endpoints, and model
