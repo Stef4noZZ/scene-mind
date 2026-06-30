@@ -9,6 +9,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+
+    <!-- Markdown rendering + syntax highlighting for AI answers -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.10.0/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11.10.0/highlight.min.js"></script>
     <style>
         body { margin: 0; background: #111; color: #fff; }
         .page-header { padding: 1.5rem 0; }
@@ -37,8 +43,17 @@
             background: rgba(0,0,0,0.35); display: flex; flex-direction: column; }
         .compare-card-head { padding: 0.5rem 0.6rem; font-size: 0.8rem; color: #cdd;
             border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .compare-card-body { padding: 0.6rem; white-space: pre-wrap; word-wrap: break-word;
+        .compare-card-body { padding: 0.6rem; word-wrap: break-word;
             line-height: 1.35; max-height: 320px; overflow-y: auto; }
+        /* Markdown content inside chat bubbles and compare cards */
+        .chat-bubble pre, .compare-card-body pre { background: rgba(0,0,0,0.45);
+            padding: 0.6rem; border-radius: 0.3rem; overflow-x: auto; margin: 0.4rem 0; }
+        .chat-bubble code, .compare-card-body code { font-size: 0.86em; }
+        .chat-bubble :first-child, .compare-card-body :first-child { margin-top: 0; }
+        .chat-bubble p:last-child, .compare-card-body p:last-child { margin-bottom: 0; }
+        .chat-bubble table, .compare-card-body table { width: 100%; border-collapse: collapse; }
+        .chat-bubble th, .chat-bubble td,
+        .compare-card-body th, .compare-card-body td { border: 1px solid rgba(255,255,255,0.15); padding: 0.25rem 0.4rem; }
     </style>
 </head>
 <body>

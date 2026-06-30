@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.shortcuts import render
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_GET, require_POST
@@ -12,6 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 from ai.providers.base import Message, ProviderError
 from ai.registry import get_registry
 from ai.service import chat as ai_chat
+from ai.service import chat_stream as ai_chat_stream
 from viewer.model_viewer import get_models, get_default_model_key
 
 from .forms import QuestionForm
@@ -104,6 +105,76 @@ def api_chat(request):
     _save_history(request, history)
 
     return JsonResponse(result)
+
+
+def _sse(obj):
+    return f"data: {json.dumps(obj)}\n\n"
+
+
+@require_POST
+def api_chat_stream(request):
+    """Streaming chat over Server-Sent Events (consumed via fetch on the client).
+
+    Emits ``data: {"delta": "..."}`` frames, then a final
+    ``data: {"done": true, "answer", "provider", "model"}`` frame, or
+    ``data: {"error": "..."}`` on failure. Backed by the same session history
+    as /api/chat/.
+    """
+    try:
+        payload = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+    if payload.get("reset"):
+        request.session.pop(SESSION_HISTORY_KEY, None)
+
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        return JsonResponse({"error": "Please enter a question."}, status=400)
+    if len(prompt) > 4000:
+        return JsonResponse({"error": "Question is too long (max 4000 chars)."}, status=400)
+
+    history = _load_history(request)
+
+    # Resolve provider/model up front so config errors return a clean HTTP error
+    # before the stream starts.
+    try:
+        info, tokens = ai_chat_stream(
+            prompt=prompt,
+            provider_id=payload.get("provider"),
+            model=payload.get("model"),
+            history=history,
+            system_prompt=getattr(settings, "AI_SYSTEM_PROMPT", None),
+        )
+    except ProviderError as exc:
+        return JsonResponse({"error": str(exc)}, status=502)
+
+    # Seed the session now (non-empty + modified) so the session middleware
+    # issues the cookie before the stream starts; the final history is saved
+    # again at the end of the stream.
+    _save_history(request, history)
+
+    def event_stream():
+        collected = []
+        try:
+            for chunk in tokens:
+                collected.append(chunk)
+                yield _sse({"delta": chunk})
+        except ProviderError as exc:
+            yield _sse({"error": str(exc)})
+            return
+
+        answer = "".join(collected)
+        history.append(Message("user", prompt))
+        history.append(Message("assistant", answer))
+        _save_history(request, history)
+        request.session.save()  # persist mid-stream (middleware already ran)
+        yield _sse({"done": True, "answer": answer, **info})
+
+    response = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"  # disable nginx buffering if present
+    return response
 
 
 @require_POST

@@ -94,6 +94,41 @@ class OpenAICompatibleProvider(LLMProvider):
         content = choices[0].message.content
         return (content or "").strip()
 
+    def generate_stream(
+        self,
+        messages: List[Message],
+        model: str,
+        options: Optional[GenerationOptions] = None,
+    ):
+        if not self.available:
+            raise ProviderError(
+                f"Provider '{self.label}' is not configured. Add its API key to .env."
+            )
+
+        options = options or GenerationOptions()
+        model = self.resolve_model(model)
+        client = self._client()
+
+        try:
+            stream = client.chat.completions.create(
+                model=model,
+                messages=[m.as_dict() for m in messages],
+                max_tokens=options.max_tokens,
+                temperature=options.temperature,
+                top_p=options.top_p,
+                stream=True,
+            )
+            for chunk in stream:
+                choices = getattr(chunk, "choices", None)
+                if not choices:
+                    continue
+                delta = getattr(choices[0], "delta", None)
+                content = getattr(delta, "content", None) if delta else None
+                if content:
+                    yield content
+        except Exception as exc:  # noqa: BLE001 - normalise every SDK/HTTP error
+            raise ProviderError(self._user_safe_error(exc)) from exc
+
     @staticmethod
     def _user_safe_error(exc: Exception) -> str:
         text = str(exc)

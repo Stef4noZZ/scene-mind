@@ -16,8 +16,10 @@ a real key in `.env` to light up OpenAI, Google Gemini, or a local Ollama.
   `base_url`. See [`ai/`](gpt3_django/ai/).
 - **Keyless by default** — the `mock` provider always works, so the app and its
   tests run end-to-end with no credentials.
-- **AJAX chat with session memory** — no full-page reloads; recent turns are
-  remembered per session.
+- **Streaming chat with session memory** — replies stream in token-by-token
+  over Server-Sent Events; recent turns are remembered per session.
+- **Markdown answers** — replies render as sanitized markdown with syntax-
+  highlighted code blocks (model output is sanitized with DOMPurify).
 - **Talking + listening avatar** — replies are spoken aloud (text-to-speech)
   and a mic button accepts voice questions (speech-to-text), with the 3D model
   animating while it speaks. Uses the browser Web Speech API (no keys); best in
@@ -56,6 +58,7 @@ The web layer never imports a vendor SDK directly — it only talks to
 |--------|------------------|--------------------------------------------------|
 | GET    | `/api/catalog/`  | Providers + models + which are available.        |
 | POST   | `/api/chat/`     | `{prompt, provider?, model?, reset?}` → `{answer, provider, model}` |
+| POST   | `/api/chat/stream/` | Same body; streams `data: {delta}` SSE frames then `data: {done, answer, provider, model}` |
 | POST   | `/api/compare/`  | `{prompt, targets:[{provider, model}]}` → `{results:[{provider, model, answer, error, latency_ms}]}` |
 
 ## Setup

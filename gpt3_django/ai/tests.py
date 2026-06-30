@@ -19,6 +19,13 @@ class MockProviderTests(SimpleTestCase):
         provider = MockProvider()
         self.assertEqual(provider.resolve_model("does-not-exist"), "mock-fast")
 
+    def test_stream_chunks_join_to_full_answer(self):
+        provider = MockProvider()
+        chunks = list(provider.generate_stream([Message("user", "Hi there")], "mock-smart"))
+        self.assertGreater(len(chunks), 1)  # actually streamed in pieces
+        joined = "".join(chunks)
+        self.assertEqual(joined, provider.generate([Message("user", "Hi there")], "mock-smart"))
+
 
 class OpenAICompatibleAvailabilityTests(SimpleTestCase):
     def test_requires_key_when_flagged(self):

@@ -71,6 +71,46 @@ class ChatApiTests(TestCase):
         self.assertEqual(resp.status_code, 405)
 
 
+class ChatStreamApiTests(TestCase):
+    def _consume(self, resp):
+        return b"".join(resp.streaming_content).decode()
+
+    def test_stream_emits_deltas_and_done_with_full_answer(self):
+        resp = self.client.post(
+            reverse("api_chat_stream"),
+            data=json.dumps({"prompt": "Hello", "provider": "mock", "model": "mock-smart"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "text/event-stream")
+        body = self._consume(resp)
+        frames = [json.loads(line[5:].strip())
+                  for line in body.split("\n\n") if line.strip().startswith("data:")]
+        self.assertTrue(any("delta" in f for f in frames))
+        done = [f for f in frames if f.get("done")]
+        self.assertEqual(len(done), 1)
+        self.assertIn("Hello", done[0]["answer"])
+        self.assertEqual(done[0]["provider"], "mock")
+
+    def test_stream_persists_history(self):
+        resp = self.client.post(
+            reverse("api_chat_stream"),
+            data=json.dumps({"prompt": "first", "provider": "mock"}),
+            content_type="application/json",
+        )
+        self._consume(resp)  # history is saved at the end of the stream
+        self.assertIn("chat_history", self.client.session)
+        self.assertEqual(len(self.client.session["chat_history"]), 2)
+
+    def test_stream_rejects_empty_prompt_before_streaming(self):
+        resp = self.client.post(
+            reverse("api_chat_stream"),
+            data=json.dumps({"prompt": "  "}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+
 class CompareApiTests(TestCase):
     def test_compare_returns_one_result_per_target_in_order(self):
         resp = self.client.post(

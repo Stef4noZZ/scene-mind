@@ -76,6 +76,19 @@ class LLMProvider(ABC):
         Raises :class:`ProviderError` on any failure, with a user-safe message.
         """
 
+    def generate_stream(
+        self,
+        messages: List[Message],
+        model: str,
+        options: Optional[GenerationOptions] = None,
+    ):
+        """Yield the reply in chunks. Default: emit the full reply at once.
+
+        Providers that support token streaming override this. Raises
+        :class:`ProviderError` (possibly mid-iteration) with a user-safe message.
+        """
+        yield self.generate(messages, model, options)
+
     def resolve_model(self, model: Optional[str]) -> str:
         """Validate a requested model id, falling back to the default."""
         valid = {m.id for m in self.models}

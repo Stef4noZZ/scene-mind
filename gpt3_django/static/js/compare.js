@@ -67,6 +67,8 @@
     if (r.error) {
       body.classList.add("chat-error");
       body.textContent = `⚠ ${r.error}`;
+    } else if (window.SceneMindMarkdown) {
+      window.SceneMindMarkdown.renderInto(body, r.answer || "");
     } else {
       body.textContent = r.answer || "";
     }
