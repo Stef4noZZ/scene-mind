@@ -24,12 +24,22 @@
             <div id="chat-log" class="chat-log mb-2"></div>
             <div id="chat-status" class="small text-white-50 mb-2" aria-live="polite"></div>
 
+            <div class="voice-controls d-flex align-items-center gap-2 mb-2 small text-white-50">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="tts-toggle" checked>
+                    <label class="form-check-label" for="tts-toggle">Speak replies</label>
+                </div>
+                <select id="tts-voice" class="form-select form-select-sm ms-auto" style="max-width: 60%;"
+                        title="Voice used for spoken replies"></select>
+            </div>
+
             <form id="chat-form" class="mt-auto">
                 {% csrf_token %}
                 <textarea id="chat-input" class="form-control mb-2" rows="3"
-                          placeholder="Type a question for the AI assistant..." maxlength="4000"></textarea>
+                          placeholder="Type or use the mic to ask the AI assistant..." maxlength="4000"></textarea>
                 <div class="d-flex gap-2">
                     <button id="chat-send" type="submit" class="btn btn-primary flex-grow-1">Send</button>
+                    <button id="chat-mic" type="button" class="btn btn-outline-light" title="Speak your question">Mic</button>
                     <button id="chat-reset" type="button" class="btn btn-outline-light">Reset</button>
                 </div>
             </form>

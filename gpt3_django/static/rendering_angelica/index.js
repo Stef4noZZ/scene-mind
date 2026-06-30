@@ -168,6 +168,11 @@ function loadModel(modelKey) {
       controls.maxDistance = distance * 4;
       controls.update();
 
+      // Remember the resting transform so the "speaking" animation can offset
+      // from it and restore cleanly when speech stops.
+      model.userData.baseY = model.position.y;
+      model.userData.baseScale = model.scale.x;
+
       updateModelInfo(modelKey);
     },
     xhr => {
@@ -213,8 +218,25 @@ canvas.addEventListener('dblclick', async () => {
   }
 });
 
+// Subtle "talking" motion while the assistant is speaking (window.SCENE_MIND_SPEAKING
+// is toggled by the chat client's TTS callbacks). Full viseme lip-sync would need
+// morph targets the models don't ship, so this conveys speech without them.
+function applySpeakingMotion() {
+  if (!currentModel || currentModel.userData.baseScale === undefined) return;
+  const base = currentModel.userData;
+  if (window.SCENE_MIND_SPEAKING) {
+    const t = performance.now() / 1000;
+    currentModel.position.y = base.baseY + Math.sin(t * 12) * 0.012;
+    currentModel.scale.setScalar(base.baseScale * (1 + Math.sin(t * 19) * 0.012));
+  } else {
+    currentModel.position.y = base.baseY;
+    currentModel.scale.setScalar(base.baseScale);
+  }
+}
+
 function animate() {
   controls.update();
+  applySpeakingMotion();
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }

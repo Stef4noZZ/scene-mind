@@ -27,6 +27,9 @@
         .chat-user { align-self: flex-end; background: #5c6ac4; color: #fff; }
         .chat-assistant { align-self: flex-start; background: rgba(255,255,255,0.10); color: #f1f1f1; }
         .chat-error { background: #6a2230; color: #ffd7d7; }
+        #chat-mic.listening { background: #c0392b; border-color: #c0392b; color: #fff;
+            animation: mic-pulse 1s ease-in-out infinite; }
+        @keyframes mic-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
     </style>
 </head>
 <body>
