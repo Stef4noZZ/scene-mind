@@ -42,9 +42,9 @@ MODEL_METADATA: Dict[str, Dict[str, str]] = {
 ALIAS_MODELS = [
     {
         "key": "iasonas",
-        "source": "wraith",
+        "source": "angelica",
         "label": "Iasonas",
-        "description": "Male avatar (placeholder mesh — add assets/iasonas/ to replace).",
+        "description": "Angelica-style body with a stylized male head.",
         "gender": "male",
     },
 ]

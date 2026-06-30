@@ -131,6 +131,10 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Cache static assets aggressively in development so GLTF/texture requests are
+# reused by the browser instead of triggering repeated 304 checks.
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 

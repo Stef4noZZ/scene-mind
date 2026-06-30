@@ -90,6 +90,121 @@ const modelPaths = Object.fromEntries(models.map(model => [model.key, model.path
 let currentModel = null;
 const loader = new GLTFLoader();
 
+function createMaleHeadReplacement() {
+  const group = new THREE.Group();
+
+  const skinMaterial = new THREE.MeshStandardMaterial({
+    color: 0xe6b08a,
+    roughness: 0.95,
+    metalness: 0.0,
+  });
+  const hairMaterial = new THREE.MeshStandardMaterial({
+    color: 0x1d1617,
+    roughness: 0.95,
+    metalness: 0.0,
+  });
+  const eyebrowMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2d1d14,
+    roughness: 0.95,
+    metalness: 0.0,
+  });
+  const eyeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x111111,
+    roughness: 0.4,
+    metalness: 0.0,
+  });
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 28, 24), skinMaterial);
+  head.scale.set(1.02, 1.04, 0.95);
+  head.position.set(0, 0.02, 0.02);
+  group.add(head);
+
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.16, 0.30), skinMaterial);
+  jaw.position.set(0, -0.17, 0.02);
+  group.add(jaw);
+
+  const hairTop = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.24, 0.34), hairMaterial);
+  hairTop.position.set(0, 0.16, 0.01);
+  hairTop.scale.set(1.06, 1.12, 1.05);
+  group.add(hairTop);
+
+  const hairBack = new THREE.Mesh(new THREE.BoxGeometry(0.43, 0.2, 0.26), hairMaterial);
+  hairBack.position.set(0, 0.12, -0.16);
+  hairBack.scale.set(1.08, 1.12, 0.85);
+  group.add(hairBack);
+
+  const beard = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.18), hairMaterial);
+  beard.position.set(0, -0.12, 0.12);
+  group.add(beard);
+
+  const eyebrowLeft = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.02, 0.02), eyebrowMaterial);
+  eyebrowLeft.position.set(-0.09, 0.05, 0.29);
+  group.add(eyebrowLeft);
+
+  const eyebrowRight = eyebrowLeft.clone();
+  eyebrowRight.position.x = 0.09;
+  group.add(eyebrowRight);
+
+  const eyeLeft = new THREE.Mesh(new THREE.SphereGeometry(0.036, 16, 16), eyeMaterial);
+  eyeLeft.position.set(-0.09, 0.01, 0.30);
+  group.add(eyeLeft);
+
+  const eyeRight = eyeLeft.clone();
+  eyeRight.position.x = 0.09;
+  group.add(eyeRight);
+
+  const nose = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.018, 0.12, 16), skinMaterial);
+  nose.position.set(0, -0.02, 0.31);
+  nose.rotation.x = Math.PI / 2;
+  group.add(nose);
+
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.022, 0.03), new THREE.MeshStandardMaterial({
+    color: 0x7a3e3e,
+    roughness: 0.95,
+    metalness: 0.0,
+  }));
+  mouth.position.set(0, -0.11, 0.28);
+  group.add(mouth);
+
+  group.scale.setScalar(1.15);
+  return group;
+}
+
+function applyModelCharacterStyle(model, modelKey) {
+  if (modelKey !== 'iasonas') {
+    return;
+  }
+
+  const replacementHead = createMaleHeadReplacement();
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const headAnchor = new THREE.Group();
+  headAnchor.position.set(0, size.y * 0.43, 0.02);
+  headAnchor.add(replacementHead);
+  model.add(headAnchor);
+
+  replacementHead.scale.setScalar(Math.max(size.y * 0.18, 0.65));
+
+  model.updateMatrixWorld(true);
+  const modelWorldPos = new THREE.Vector3();
+  model.getWorldPosition(modelWorldPos);
+  const upperHeadThreshold = modelWorldPos.y + size.y * 0.58;
+  const tempVec = new THREE.Vector3();
+
+  model.traverse(object => {
+    if (!object.isMesh && !object.isSkinnedMesh) {
+      return;
+    }
+
+    object.getWorldPosition(tempVec);
+    if (tempVec.y > upperHeadThreshold) {
+      object.visible = false;
+    }
+  });
+
+  headAnchor.visible = true;
+}
+
 function updateStatus(text) {
   if (modelNameElement) {
     modelNameElement.textContent = text;
@@ -144,6 +259,7 @@ function loadModel(modelKey) {
 
       currentModel = model;
       scene.add(model);
+      applyModelCharacterStyle(model, modelKey);
 
       // 1. Normalize the model to a known size regardless of its source units.
       const TARGET_SIZE = 1.8;

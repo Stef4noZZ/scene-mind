@@ -193,9 +193,8 @@ class ModelDiscoveryTests(TestCase):
         models = {m["key"]: m for m in discover_models()}
         self.assertEqual(models["angelica"]["gender"], "female")
 
-    def test_iasonas_alias_present_male_and_reuses_wraith_mesh(self):
+    def test_iasonas_uses_its_own_angelica_style_folder(self):
         models = {m["key"]: m for m in discover_models()}
         self.assertIn("iasonas", models)
         self.assertEqual(models["iasonas"]["gender"], "male")
-        # Placeholder mesh borrows wraith's path until a real asset is added.
-        self.assertEqual(models["iasonas"]["path"], models["wraith"]["path"])
+        self.assertEqual(models["iasonas"]["path"], "/static/scene/assets/iasonas/scene.gltf")
