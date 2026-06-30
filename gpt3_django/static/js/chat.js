@@ -17,30 +17,41 @@
 
   const providerById = Object.fromEntries(catalog.providers.map((p) => [p.id, p]));
 
-  // --- Text-to-speech: Angelica speaks the replies -----------------------
+  // --- Text-to-speech: the active avatar speaks the replies --------------
   const synth = window.speechSynthesis || null;
   let voices = [];
+  // Voice gender follows the selected 3D character (Angelica=female by default,
+  // Iasonas=male). The Web Speech API exposes no gender field, so we match by
+  // common voice names and fall back to all English voices if none match.
+  let currentGender = "female";
 
-  // Angelica is a female avatar, so prefer female voices. The Web Speech API
-  // exposes no gender field, so match common female voice names (plus any
-  // "female" label) and fall back to all English voices if none are found.
   const FEMALE_VOICE_HINTS = [
     "female", "samantha", "victoria", "karen", "kathy", "moira", "tessa",
     "fiona", "allison", "ava", "susan", "vicki", "kate", "serena", "zira",
     "stephanie", "google uk english female", "google us english",
   ];
+  const MALE_VOICE_HINTS = [
+    "male", "alex", "albert", "daniel", "fred", "ralph", "rishi", "tom",
+    "aaron", "arthur", "oliver", "george", "james", "mark", "david",
+    "google uk english male",
+  ];
 
-  function isLikelyFemale(voice) {
+  function matchesHints(voice, hints) {
     const name = voice.name.toLowerCase();
-    if (/\bmale\b/.test(name) && !name.includes("female")) return false;
-    return FEMALE_VOICE_HINTS.some((hint) => name.includes(hint));
+    if (hints === MALE_VOICE_HINTS && name.includes("female")) return false;
+    if (hints === FEMALE_VOICE_HINTS && /\bmale\b/.test(name) && !name.includes("female")) {
+      return false;
+    }
+    return hints.some((hint) => name.includes(hint));
   }
 
   function loadVoices() {
     if (!synth) return;
     const english = synth.getVoices().filter((v) => v.lang.startsWith("en"));
-    const female = english.filter(isLikelyFemale);
-    voices = female.length ? female : english; // never leave the picker empty
+    let pool = english;
+    if (currentGender === "female") pool = english.filter((v) => matchesHints(v, FEMALE_VOICE_HINTS));
+    else if (currentGender === "male") pool = english.filter((v) => matchesHints(v, MALE_VOICE_HINTS));
+    voices = pool.length ? pool : english; // never leave the picker empty
     if (!voiceSelect) return;
     voiceSelect.innerHTML = "";
     voices.forEach((v, i) => {
@@ -50,6 +61,15 @@
       voiceSelect.appendChild(opt);
     });
   }
+
+  // Re-pick voices whenever the active 3D character changes.
+  window.addEventListener("scene-mind:model", (e) => {
+    const gender = (e.detail && e.detail.gender) || "";
+    if (gender !== currentGender) {
+      currentGender = gender;
+      loadVoices();
+    }
+  });
 
   function speak(text) {
     if (!synth || !ttsToggle || !ttsToggle.checked || !text) return;

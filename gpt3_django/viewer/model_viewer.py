@@ -28,15 +28,29 @@ def _web_prefix() -> str:
 
 # Optional polish layered on top of discovery. Keys that are not found on disk
 # are simply ignored; folders not listed here still appear with a derived label.
+# "gender" drives which TTS voices the UI offers (female | male | "" for any).
 MODEL_METADATA: Dict[str, Dict[str, str]] = {
-    "angelica": {"label": "Angelica", "description": "The original Angelica 3D model."},
-    "fem_head": {"label": "Fem Head", "description": "A detailed head model with an expressive face."},
-    "fem_face": {"label": "Fem Face", "description": "A face study model with refined textures."},
-    "wraith": {"label": "Wraith", "description": "A stylized wraith model with atmospheric details."},
+    "angelica": {"label": "Angelica", "description": "Female avatar (default).", "gender": "female"},
+    "iasonas": {"label": "Iasonas", "description": "Male avatar.", "gender": "male"},
+    "fem_head": {"label": "Fem Head", "description": "A detailed head model with an expressive face.", "gender": "female"},
+    "fem_face": {"label": "Fem Face", "description": "A face study model with refined textures.", "gender": "female"},
+    "wraith": {"label": "Wraith", "description": "A stylized wraith model.", "gender": "male"},
 }
 
+# Virtual models that reuse another model's mesh until a dedicated asset is
+# added. Dropping a real folder at assets/<key>/ overrides the alias.
+ALIAS_MODELS = [
+    {
+        "key": "iasonas",
+        "source": "wraith",
+        "label": "Iasonas",
+        "description": "Male avatar (placeholder mesh — add assets/iasonas/ to replace).",
+        "gender": "male",
+    },
+]
+
 # Preferred order; anything else is appended alphabetically after these.
-PREFERRED_ORDER = ["angelica", "fem_head", "fem_face", "wraith"]
+PREFERRED_ORDER = ["angelica", "iasonas", "fem_head", "fem_face", "wraith"]
 
 DEFAULT_MODEL_KEY = "angelica"
 
@@ -89,6 +103,23 @@ def discover_models() -> List[Dict[str, str]]:
             "label": meta.get("label", _humanize(key)),
             "path": _to_web_path(model_file, assets_root),
             "description": meta.get("description", ""),
+            "gender": meta.get("gender", ""),
+        }
+
+    # Add alias models (e.g. Iasonas) that borrow an existing mesh, unless a
+    # real folder of the same key was already discovered.
+    for alias in ALIAS_MODELS:
+        if alias["key"] in found:
+            continue
+        source = found.get(alias["source"])
+        if not source:
+            continue
+        found[alias["key"]] = {
+            "key": alias["key"],
+            "label": alias["label"],
+            "path": source["path"],
+            "description": alias["description"],
+            "gender": alias.get("gender", ""),
         }
 
     ordered_keys = [k for k in PREFERRED_ORDER if k in found]

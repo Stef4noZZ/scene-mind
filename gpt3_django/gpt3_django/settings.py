@@ -171,7 +171,7 @@ AI_CONFIG = {
 # System prompt prepended to every conversation.
 AI_SYSTEM_PROMPT = os.getenv(
     'AI_SYSTEM_PROMPT',
-    'You are AngelicaAI, a concise and helpful assistant inside the SceneMind app.',
+    'You are a concise and helpful assistant inside the SceneMind app.',
 )
 
 # Max conversation turns retained in the session (user+assistant pairs).

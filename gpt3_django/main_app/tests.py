@@ -95,3 +95,14 @@ class ModelDiscoveryTests(TestCase):
         keys = {m["key"] for m in discover_models()}
         if keys:
             self.assertIn(get_default_model_key(), keys)
+
+    def test_angelica_is_female(self):
+        models = {m["key"]: m for m in discover_models()}
+        self.assertEqual(models["angelica"]["gender"], "female")
+
+    def test_iasonas_alias_present_male_and_reuses_wraith_mesh(self):
+        models = {m["key"]: m for m in discover_models()}
+        self.assertIn("iasonas", models)
+        self.assertEqual(models["iasonas"]["gender"], "male")
+        # Placeholder mesh borrows wraith's path until a real asset is added.
+        self.assertEqual(models["iasonas"]["path"], models["wraith"]["path"])
