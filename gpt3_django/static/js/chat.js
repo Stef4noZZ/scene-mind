@@ -194,12 +194,42 @@
     statusEl.textContent = busy ? "Thinking…" : "";
   }
 
+  function renderAnswer(el, text) {
+    if (window.SceneMindMarkdown) window.SceneMindMarkdown.renderInto(el, text);
+    else el.textContent = text;
+  }
+
+  function handleFrame(payload, ctx) {
+    if (payload.error) {
+      ctx.pending.textContent = `⚠ ${payload.error}`;
+      ctx.pending.classList.add("chat-error");
+      ctx.failed = true;
+      return;
+    }
+    if (payload.delta) {
+      if (ctx.first) {
+        ctx.pending.textContent = "";
+        ctx.first = false;
+      }
+      ctx.answer += payload.delta;
+      ctx.pending.textContent = ctx.answer; // raw while streaming (fast)
+      log.scrollTop = log.scrollHeight;
+    }
+    if (payload.done) {
+      ctx.answer = payload.answer || ctx.answer;
+      statusEl.textContent = `via ${payload.provider} · ${payload.model}`;
+      renderAnswer(ctx.pending, ctx.answer); // format once complete
+      speak(ctx.answer);
+    }
+  }
+
   async function sendMessage(prompt) {
     addBubble("user", prompt);
     setBusy(true);
     const pending = addBubble("assistant", "…");
+    const ctx = { pending, answer: "", first: true, failed: false };
     try {
-      const resp = await fetch("/api/chat/", {
+      const resp = await fetch("/api/chat/stream/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -211,14 +241,31 @@
           model: modelSelect.value,
         }),
       });
-      const data = await resp.json();
-      if (!resp.ok) {
+      if (!resp.ok || !resp.body) {
+        const data = await resp.json().catch(() => ({}));
         pending.textContent = `⚠ ${data.error || "Request failed."}`;
         pending.classList.add("chat-error");
-      } else {
-        pending.textContent = data.answer;
-        statusEl.textContent = `via ${data.provider} · ${data.model}`;
-        speak(data.answer);
+        return;
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf("\n\n")) >= 0) {
+          const frame = buf.slice(0, idx).trim();
+          buf = buf.slice(idx + 2);
+          if (!frame.startsWith("data:")) continue;
+          try {
+            handleFrame(JSON.parse(frame.slice(5).trim()), ctx);
+          } catch (e) {
+            /* ignore malformed frame */
+          }
+          if (ctx.failed) return;
+        }
       }
     } catch (err) {
       pending.textContent = "⚠ Network error. Is the server running?";

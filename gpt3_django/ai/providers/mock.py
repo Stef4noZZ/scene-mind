@@ -47,3 +47,14 @@ class MockProvider(LLMProvider):
             "[mock-fast] SceneMind mock reply. Select a configured provider "
             "(OpenAI, Gemini, Ollama) to get real model output."
         )
+
+    def generate_stream(
+        self,
+        messages: List[Message],
+        model: str,
+        options: Optional[GenerationOptions] = None,
+    ):
+        # Emit the canned reply word by word so the UI exercises the streaming path.
+        text = self.generate(messages, model, options)
+        for i, word in enumerate(text.split(" ")):
+            yield (word if i == 0 else " " + word)
