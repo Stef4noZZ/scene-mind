@@ -1,4 +1,6 @@
 import json
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
 from django.contrib import messages
@@ -15,6 +17,7 @@ from viewer.model_viewer import get_models, get_default_model_key
 from .forms import QuestionForm
 
 SESSION_HISTORY_KEY = "chat_history"
+MAX_COMPARE_TARGETS = 6
 
 
 def _viewer_context():
@@ -101,3 +104,64 @@ def api_chat(request):
     _save_history(request, history)
 
     return JsonResponse(result)
+
+
+@require_POST
+def api_compare(request):
+    """Run one prompt across several provider/model targets concurrently.
+
+    Body: {"prompt": str, "targets": [{"provider": str, "model": str}, ...]}
+    Each target is a fresh single-turn call (no shared history) so the
+    comparison is fair. Results preserve the requested order.
+    """
+    try:
+        payload = json.loads(request.body or b"{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON body."}, status=400)
+
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        return JsonResponse({"error": "Please enter a question."}, status=400)
+    if len(prompt) > 4000:
+        return JsonResponse({"error": "Question is too long (max 4000 chars)."}, status=400)
+
+    targets = payload.get("targets")
+    if not isinstance(targets, list) or not targets:
+        return JsonResponse(
+            {"error": "Select at least one provider/model to compare."}, status=400
+        )
+    if len(targets) > MAX_COMPARE_TARGETS:
+        return JsonResponse(
+            {"error": f"Too many targets (max {MAX_COMPARE_TARGETS})."}, status=400
+        )
+
+    system_prompt = getattr(settings, "AI_SYSTEM_PROMPT", None)
+
+    def run_one(target):
+        provider_id = (target or {}).get("provider")
+        model = (target or {}).get("model")
+        started = time.monotonic()
+        try:
+            result = ai_chat(
+                prompt=prompt,
+                provider_id=provider_id,
+                model=model,
+                history=None,
+                system_prompt=system_prompt,
+            )
+            answer, error = result["answer"], None
+            provider_id, model = result["provider"], result["model"]
+        except ProviderError as exc:
+            answer, error = None, str(exc)
+        return {
+            "provider": provider_id,
+            "model": model,
+            "answer": answer,
+            "error": error,
+            "latency_ms": int((time.monotonic() - started) * 1000),
+        }
+
+    with ThreadPoolExecutor(max_workers=min(len(targets), MAX_COMPARE_TARGETS)) as pool:
+        results = list(pool.map(run_one, targets))
+
+    return JsonResponse({"results": results})

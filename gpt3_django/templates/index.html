@@ -73,12 +73,32 @@
     </div>
 </div>
 
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card p-4 shadow-sm">
+            <h2 class="h4 mb-1">Multi-model Compare</h2>
+            <p class="text-muted">Ask one question and see how different providers and models answer, side by side.</p>
+
+            <div id="compare-targets" class="mb-3"></div>
+
+            <div class="d-flex gap-2 align-items-start">
+                <textarea id="compare-input" class="form-control" rows="2"
+                          placeholder="Ask a question to compare across the selected models..." maxlength="4000"></textarea>
+                <button id="compare-run" type="button" class="btn btn-primary" style="white-space: nowrap;">Compare</button>
+            </div>
+            <div id="compare-status" class="small text-white-50 my-2" aria-live="polite"></div>
+            <div id="compare-results" class="compare-results"></div>
+        </div>
+    </div>
+</div>
+
 <script>
     window.SCENE_MIND_MODELS = {{ models_json }};
     window.SCENE_MIND_DEFAULT_MODEL = "{{ default_model }}";
     window.SCENE_MIND_CATALOG = {{ catalog_json }};
 </script>
 <script src="{% static 'js/chat.js' %}"></script>
+<script src="{% static 'js/compare.js' %}"></script>
 
 <!-- Import map: lets the bundled three.js add-ons resolve the bare "three" specifier. -->
 <script type="importmap">

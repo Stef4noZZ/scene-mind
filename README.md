@@ -22,6 +22,8 @@ a real key in `.env` to light up OpenAI, Google Gemini, or a local Ollama.
   and a mic button accepts voice questions (speech-to-text), with the 3D model
   animating while it speaks. Uses the browser Web Speech API (no keys); best in
   Chrome/Edge, served over `localhost` or HTTPS for mic access.
+- **Multi-model compare** — ask one question across several providers/models
+  at once and see the answers side by side with per-model latency.
 - **Auto-discovered 3D models** — drop a folder with a `.gltf`/`.glb` under
   `static/rendering_angelica/assets/<name>/` and it appears in the viewer.
 - **Tested** — provider registry, mock provider, API endpoints, and model
@@ -54,6 +56,7 @@ The web layer never imports a vendor SDK directly — it only talks to
 |--------|------------------|--------------------------------------------------|
 | GET    | `/api/catalog/`  | Providers + models + which are available.        |
 | POST   | `/api/chat/`     | `{prompt, provider?, model?, reset?}` → `{answer, provider, model}` |
+| POST   | `/api/compare/`  | `{prompt, targets:[{provider, model}]}` → `{results:[{provider, model, answer, error, latency_ms}]}` |
 
 ## Setup
 
