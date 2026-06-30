@@ -21,9 +21,26 @@
   const synth = window.speechSynthesis || null;
   let voices = [];
 
+  // Angelica is a female avatar, so prefer female voices. The Web Speech API
+  // exposes no gender field, so match common female voice names (plus any
+  // "female" label) and fall back to all English voices if none are found.
+  const FEMALE_VOICE_HINTS = [
+    "female", "samantha", "victoria", "karen", "kathy", "moira", "tessa",
+    "fiona", "allison", "ava", "susan", "vicki", "kate", "serena", "zira",
+    "stephanie", "google uk english female", "google us english",
+  ];
+
+  function isLikelyFemale(voice) {
+    const name = voice.name.toLowerCase();
+    if (/\bmale\b/.test(name) && !name.includes("female")) return false;
+    return FEMALE_VOICE_HINTS.some((hint) => name.includes(hint));
+  }
+
   function loadVoices() {
     if (!synth) return;
-    voices = synth.getVoices().filter((v) => v.lang.startsWith("en"));
+    const english = synth.getVoices().filter((v) => v.lang.startsWith("en"));
+    const female = english.filter(isLikelyFemale);
+    voices = female.length ? female : english; // never leave the picker empty
     if (!voiceSelect) return;
     voiceSelect.innerHTML = "";
     voices.forEach((v, i) => {
