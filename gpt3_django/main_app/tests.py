@@ -180,7 +180,7 @@ class ModelDiscoveryTests(TestCase):
     def test_paths_are_static_urls(self):
         for model in discover_models():
             self.assertTrue(
-                model["path"].startswith("/static/rendering_angelica/assets/"),
+                model["path"].startswith("/static/scene/assets/"),
                 model["path"],
             )
 

@@ -78,7 +78,7 @@ const models = window.SCENE_MIND_MODELS || [
   {
     key: 'angelica',
     label: 'Angelica',
-    path: '/static/rendering_angelica/assets/angelica/scene.gltf',
+    path: '/static/scene/assets/angelica/scene.gltf',
     description: 'The original Angelica 3D model.',
   },
 ];

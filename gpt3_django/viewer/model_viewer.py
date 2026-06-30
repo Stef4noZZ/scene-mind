@@ -2,7 +2,7 @@
 
 Models are discovered by scanning the assets directory at request time: drop a
 folder containing a ``.gltf``/``.glb`` under
-``static/rendering_angelica/assets/<key>/`` and it shows up automatically.
+``static/scene/assets/<key>/`` and it shows up automatically.
 
 Optional curated metadata (nicer labels, descriptions, ordering) can be layered
 on top via :data:`MODEL_METADATA` without having to hardcode the full list.
@@ -17,14 +17,14 @@ from django.conf import settings
 
 # GLTFLoader resolves fetch URLs against the document (served at "/"), not the
 # JS module, so model paths must be absolute static URLs
-# ("/static/rendering_angelica/assets/<...>"), built from STATIC_URL.
-_ASSETS_SUBDIR = Path("rendering_angelica") / "assets"
+# ("/static/scene/assets/<...>"), built from STATIC_URL.
+_ASSETS_SUBDIR = Path("scene") / "assets"
 _MODEL_EXTENSIONS = (".gltf", ".glb")
 
 
 def _web_prefix() -> str:
     static_url = getattr(settings, "STATIC_URL", "/static/") or "/static/"
-    return f"{static_url.rstrip('/')}/rendering_angelica/assets"
+    return f"{static_url.rstrip('/')}/scene/assets"
 
 # Optional polish layered on top of discovery. Keys that are not found on disk
 # are simply ignored; folders not listed here still appear with a derived label.
