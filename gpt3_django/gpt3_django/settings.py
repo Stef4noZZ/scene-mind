@@ -22,14 +22,19 @@ load_dotenv(BASE_DIR / '.env')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-a=oxhqb7ju4)@9ut2g1n^6-6ku@wq3^=y0)au*lij@@=*^(4tc',
-)
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# A throwaway key is only allowed in DEBUG; production must set DJANGO_SECRET_KEY.
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-dev-only-do-not-use-in-production'
+    else:
+        raise RuntimeError(
+            'DJANGO_SECRET_KEY must be set when DEBUG is off. See .env.example.'
+        )
 
 ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1 localhost').split()
 
@@ -43,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'ai',
     'main_app',
     'viewer',
 ]
@@ -134,4 +140,40 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+
+# AI providers
+# ------------
+# The registry (see the `ai` app) reads this config to decide which providers
+# to expose. The mock provider is always available, so the app works with no
+# keys at all. Add a key in .env to light up a real provider.
+#
+# AI_ENABLED_PROVIDERS optionally restricts which non-mock providers appear,
+# e.g. "openai,gemini". Leave unset to include all known providers (they still
+# only become *available* once their key/endpoint is configured).
+_enabled = os.getenv('AI_ENABLED_PROVIDERS', '').strip()
+
+AI_CONFIG = {
+    'default_provider': os.getenv('AI_DEFAULT_PROVIDER', 'mock'),
+    'enabled': [p.strip() for p in _enabled.split(',') if p.strip()] or None,
+    'keys': {
+        'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY', ''),
+        'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', ''),
+        'OLLAMA_API_KEY': os.getenv('OLLAMA_API_KEY', ''),
+    },
+    'base_urls': {
+        # Override only if your local Ollama / proxy lives elsewhere.
+        **({'ollama': os.getenv('OLLAMA_BASE_URL')} if os.getenv('OLLAMA_BASE_URL') else {}),
+        **({'openai': os.getenv('OPENAI_BASE_URL')} if os.getenv('OPENAI_BASE_URL') else {}),
+    },
+}
+
+# System prompt prepended to every conversation.
+AI_SYSTEM_PROMPT = os.getenv(
+    'AI_SYSTEM_PROMPT',
+    'You are AngelicaAI, a concise and helpful assistant inside the SceneMind app.',
+)
+
+# Max conversation turns retained in the session (user+assistant pairs).
+AI_HISTORY_TURNS = int(os.getenv('AI_HISTORY_TURNS', '6'))
 

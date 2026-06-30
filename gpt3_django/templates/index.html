@@ -6,33 +6,42 @@
 {% block content %}
 <div class="row gy-4">
     <div class="col-lg-5">
-        <div class="card p-4 shadow-sm">
-            <h2 class="h4 mb-3">Ask the AI Assistant</h2>
-            <p class="text-muted">Enter a question for the OpenAI assistant and get a conversational answer.</p>
+        <div class="card p-4 shadow-sm h-100 d-flex flex-column">
+            <h2 class="h4 mb-1">AI Assistant</h2>
+            <p class="text-muted">Pick a provider and model, then chat. Works out of the box with the keyless Mock provider.</p>
 
-            <form method="post" novalidate>
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="btn btn-primary">Submit</button>
-            </form>
-
-            {% if answer %}
-                <div class="mt-4">
-                    <h3 class="h5">Answer</h3>
-                    <div class="card p-3 bg-dark text-white">
-                        <pre class="mb-0">{{ answer }}</pre>
-                    </div>
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <label for="provider-select" class="form-label small text-white-50 mb-1">Provider</label>
+                    <select id="provider-select" class="form-select form-select-sm"></select>
                 </div>
-            {% endif %}
+                <div class="col-6">
+                    <label for="model-select" class="form-label small text-white-50 mb-1">Model</label>
+                    <select id="model-select" class="form-select form-select-sm"></select>
+                </div>
+            </div>
+
+            <div id="chat-log" class="chat-log mb-2"></div>
+            <div id="chat-status" class="small text-white-50 mb-2" aria-live="polite"></div>
+
+            <form id="chat-form" class="mt-auto">
+                {% csrf_token %}
+                <textarea id="chat-input" class="form-control mb-2" rows="3"
+                          placeholder="Type a question for the AI assistant..." maxlength="4000"></textarea>
+                <div class="d-flex gap-2">
+                    <button id="chat-send" type="submit" class="btn btn-primary flex-grow-1">Send</button>
+                    <button id="chat-reset" type="button" class="btn btn-outline-light">Reset</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <div class="col-lg-7">
-        <div class="card p-3 shadow-sm">
+        <div class="card p-3 shadow-sm h-100">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div>
                     <h2 class="h4 mb-1">3D Model Explorer</h2>
-                    <p class="text-muted mb-0">Explore the integrated model viewer with local Three.js support.</p>
+                    <p class="text-muted mb-0">Models are auto-discovered from the assets folder.</p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <label for="model-selector" class="text-white-50 mb-0">Model</label>
@@ -57,6 +66,17 @@
 <script>
     window.SCENE_MIND_MODELS = {{ models_json }};
     window.SCENE_MIND_DEFAULT_MODEL = "{{ default_model }}";
+    window.SCENE_MIND_CATALOG = {{ catalog_json }};
+</script>
+<script src="{% static 'js/chat.js' %}"></script>
+
+<!-- Import map: lets the bundled three.js add-ons resolve the bare "three" specifier. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "{% static 'rendering_angelica/three.js-master/build/three.module.js' %}"
+  }
+}
 </script>
 <script type="module" src="{% static 'rendering_angelica/index.js' %}"></script>
 {% endblock content %}

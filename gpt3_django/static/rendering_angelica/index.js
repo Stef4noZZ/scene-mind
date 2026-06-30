@@ -1,4 +1,7 @@
-import * as THREE from './three.js-master/build/three.module.js';
+// 'three' resolves via the import map declared in the template; the jsm
+// add-ons below also import the bare 'three' specifier, so they share this
+// single module instance.
+import * as THREE from 'three';
 import { GLTFLoader } from './three.js-master/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from './three.js-master/examples/jsm/controls/OrbitControls.js';
 
@@ -9,10 +12,17 @@ const modelSelector = document.getElementById('model-selector');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x120818);
 
-const sizes = {
-  width: window.innerWidth,
-  height: window.innerHeight
-};
+// Size the renderer to the canvas's own box, not the whole window — otherwise
+// the WebGL buffer overflows the viewer column and the (centered) model ends
+// up rendered outside the visible area.
+function getViewSize() {
+  const parent = canvas.parentElement;
+  const width = canvas.clientWidth || (parent ? parent.clientWidth : window.innerWidth);
+  const height = canvas.clientHeight || 450;
+  return { width: Math.max(width, 1), height: Math.max(height, 1) };
+}
+
+const sizes = getViewSize();
 
 const camera = new THREE.PerspectiveCamera(45, sizes.width / sizes.height, 0.1, 1000);
 camera.position.set(0, 1.8, 4.5);
@@ -23,7 +33,7 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: false
 });
-renderer.setSize(sizes.width, sizes.height);
+renderer.setSize(sizes.width, sizes.height, false);  // false: keep CSS-driven display size
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.physicallyCorrectLights = true;
@@ -62,30 +72,14 @@ scene.add(gridHelper);
 const axesHelper = new THREE.AxesHelper(1.5);
 scene.add(axesHelper);
 
+// The backend injects SCENE_MIND_MODELS with absolute static URLs. This
+// fallback (used only if that injection is missing) mirrors that format.
 const models = window.SCENE_MIND_MODELS || [
   {
     key: 'angelica',
     label: 'Angelica',
-    path: './assets/angelica/scene.gltf',
+    path: '/static/rendering_angelica/assets/angelica/scene.gltf',
     description: 'The original Angelica 3D model.',
-  },
-  {
-    key: 'fem_head',
-    label: 'Fem Head',
-    path: './assets/fem_head/scene.gltf',
-    description: 'A detailed head model with an expressive face.',
-  },
-  {
-    key: 'fem_face',
-    label: 'Fem Face',
-    path: './assets/fem_face/scene.gltf',
-    description: 'A face study model with refined textures.',
-  },
-  {
-    key: 'wraith',
-    label: 'Wraith',
-    path: './assets/wraith/gltf/wraith.gltf',
-    description: 'A stylized wraith model with atmospheric details.',
   },
 ];
 
@@ -145,18 +139,33 @@ function loadModel(modelKey) {
       currentModel = model;
       scene.add(model);
 
+      // 1. Normalize the model to a known size regardless of its source units.
+      const TARGET_SIZE = 1.8;
+      const rawBox = new THREE.Box3().setFromObject(model);
+      const rawMax = Math.max(...rawBox.getSize(new THREE.Vector3()).toArray()) || 1;
+      model.scale.setScalar(TARGET_SIZE / rawMax);
+
+      // 2. Re-measure after scaling and recenter the model on the origin.
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-      const maxDimension = Math.max(size.x, size.y, size.z);
-      const scale = maxDimension > 0 ? 1.6 / maxDimension : 1;
-      model.scale.setScalar(scale);
-      model.position.sub(center.multiplyScalar(scale));
+      model.position.sub(center);
 
-      const cameraDistance = Math.max(2.3, maxDimension * 2.1);
-      camera.position.set(cameraDistance * 0.25, cameraDistance * 0.8, cameraDistance * 1.2);
-      camera.lookAt(0, 0, 0);
-      controls.target.set(0, Math.max(size.y, 1) * 0.2, 0);
+      // 3. Frame the camera to fit the normalized size for the current FOV,
+      //    accounting for the canvas aspect ratio, with a little padding.
+      const fov = (camera.fov * Math.PI) / 180;
+      const fitHeightDist = (size.y / 2) / Math.tan(fov / 2);
+      const fitWidthDist = (size.x / 2) / (Math.tan(fov / 2) * camera.aspect);
+      const distance = Math.max(fitHeightDist, fitWidthDist) * 1.5 || TARGET_SIZE * 2;
+
+      camera.position.set(distance * 0.2, distance * 0.25, distance);
+      camera.near = Math.max(distance / 100, 0.01);
+      camera.far = distance * 100;
+      camera.updateProjectionMatrix();
+
+      controls.target.set(0, 0, 0);
+      controls.minDistance = distance * 0.3;
+      controls.maxDistance = distance * 4;
       controls.update();
 
       updateModelInfo(modelKey);
@@ -178,17 +187,23 @@ if (modelSelector) {
 }
 
 function resize() {
-  sizes.width = window.innerWidth;
-  sizes.height = window.innerHeight;
+  const next = getViewSize();
+  sizes.width = next.width;
+  sizes.height = next.height;
 
   camera.aspect = sizes.width / sizes.height;
   camera.updateProjectionMatrix();
 
-  renderer.setSize(sizes.width, sizes.height);
+  renderer.setSize(sizes.width, sizes.height, false);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 }
 
 window.addEventListener('resize', resize);
+
+// React to layout changes (column reflow, fonts loading) — not just window resizes.
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(resize).observe(canvas);
+}
 
 canvas.addEventListener('dblclick', async () => {
   if (!document.fullscreenElement) {

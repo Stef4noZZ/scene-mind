@@ -1,33 +1,23 @@
-import os
+"""Backwards-compatible shim.
 
-import openai
+The OpenAI-specific service was replaced by the provider-agnostic ``ai`` layer.
+This thin wrapper keeps the old import path working and delegates to it.
+Prefer importing from ``ai.service`` directly in new code.
+"""
+from __future__ import annotations
 
-DEFAULT_OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+from typing import Optional
+
+from ai.providers.base import GenerationOptions
+from ai.service import chat
 
 
-def _get_api_key():
-    return os.getenv('OPENAI_API_KEY')
-
-
-def ask_openai(prompt, model=None, max_tokens=250, temperature=0.7):
-    api_key = _get_api_key()
-    if not api_key:
-        raise ValueError(
-            'OpenAI API key is not configured. Set OPENAI_API_KEY in your environment.'
-        )
-
-    openai.api_key = api_key
-    model = model or DEFAULT_OPENAI_MODEL
-
-    response = openai.ChatCompletion.create(
+def ask_openai(prompt, model: Optional[str] = None, max_tokens: int = 250, temperature: float = 0.7) -> str:
+    """Generate a reply using the OpenAI provider (legacy signature)."""
+    result = chat(
+        prompt=prompt,
+        provider_id="openai",
         model=model,
-        messages=[{'role': 'user', 'content': prompt}],
-        temperature=temperature,
-        max_tokens=max_tokens,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0,
+        options=GenerationOptions(max_tokens=max_tokens, temperature=temperature),
     )
-
-    choice = response.choices[0]
-    return choice.message.get('content', '').strip()
+    return result["answer"]
