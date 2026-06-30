@@ -71,6 +71,59 @@ class ChatApiTests(TestCase):
         self.assertEqual(resp.status_code, 405)
 
 
+class CompareApiTests(TestCase):
+    def test_compare_returns_one_result_per_target_in_order(self):
+        resp = self.client.post(
+            reverse("api_compare"),
+            data=json.dumps({
+                "prompt": "Hello",
+                "targets": [
+                    {"provider": "mock", "model": "mock-fast"},
+                    {"provider": "mock", "model": "mock-smart"},
+                ],
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        results = resp.json()["results"]
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0]["model"], "mock-fast")
+        self.assertEqual(results[1]["model"], "mock-smart")
+        self.assertIsNone(results[0]["error"])
+        self.assertIn("latency_ms", results[0])
+
+    def test_compare_requires_targets(self):
+        resp = self.client.post(
+            reverse("api_compare"),
+            data=json.dumps({"prompt": "Hi", "targets": []}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_compare_rejects_too_many_targets(self):
+        targets = [{"provider": "mock", "model": "mock-fast"} for _ in range(7)]
+        resp = self.client.post(
+            reverse("api_compare"),
+            data=json.dumps({"prompt": "Hi", "targets": targets}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_compare_reports_error_per_target_without_failing_whole_request(self):
+        resp = self.client.post(
+            reverse("api_compare"),
+            data=json.dumps({
+                "prompt": "Hi",
+                "targets": [{"provider": "does-not-exist", "model": "x"}],
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        results = resp.json()["results"]
+        self.assertEqual(len(results), 1)
+        self.assertIsNotNone(results[0]["error"])
+
+
 class IndexViewTests(TestCase):
     def test_index_renders(self):
         resp = self.client.get(reverse("index"))
