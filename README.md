@@ -75,6 +75,22 @@ python gpt3_django/manage.py runserver
 
 Open http://127.0.0.1:8000 — the **Mock** provider works immediately.
 
+## Trying the voice features
+
+- **Spoken replies + lip-sync (no mic needed):** keep **"Speak replies"** on,
+  type a question, and press Send. The reply is spoken and the avatar's head
+  moves in sync. Works in any modern browser.
+- **Voice input / Conversation mode (needs a mic):** requires **Chrome or
+  Edge** — Firefox has no speech recognition and Safari is unreliable. Serve
+  over `http://localhost` / `127.0.0.1` (a secure context) and **allow the
+  microphone** when prompted (mic icon in the address bar).
+  - Click **Mic** to dictate a single question, or toggle **Conversation mode**
+    for hands-free chat where you can talk over the avatar (barge-in).
+  - **Use headphones** — otherwise the mic hears the avatar's own voice and can
+    re-trigger itself (browsers don't echo-cancel synthesized speech).
+- If the **Mic button is missing**, your browser doesn't support speech
+  recognition — switch to Chrome/Edge.
+
 ## Enabling real providers (all optional)
 
 Add any of these to `.env`; the UI picks them up automatically on reload.

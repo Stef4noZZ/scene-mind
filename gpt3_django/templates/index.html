@@ -24,12 +24,17 @@
             <div id="chat-log" class="chat-log mb-2"></div>
             <div id="chat-status" class="small text-white-50 mb-2" aria-live="polite"></div>
 
-            <div class="voice-controls d-flex align-items-center gap-2 mb-2 small text-white-50">
+            <div class="voice-controls d-flex align-items-center gap-3 flex-wrap mb-2 small text-white-50">
                 <div class="form-check form-switch mb-0">
                     <input class="form-check-input" type="checkbox" id="tts-toggle" checked>
                     <label class="form-check-label" for="tts-toggle">Speak replies</label>
                 </div>
-                <select id="tts-voice" class="form-select form-select-sm ms-auto" style="max-width: 60%;"
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="convo-toggle">
+                    <label class="form-check-label" for="convo-toggle"
+                           title="Hands-free: mic stays open, auto-sends, and you can talk over the avatar. Headphones recommended.">Conversation mode</label>
+                </div>
+                <select id="tts-voice" class="form-select form-select-sm ms-auto" style="max-width: 55%;"
                         title="Voice used for spoken replies"></select>
             </div>
 
