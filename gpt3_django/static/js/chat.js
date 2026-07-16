@@ -14,6 +14,7 @@
   const micBtn = document.getElementById("chat-mic");
   const ttsToggle = document.getElementById("tts-toggle");
   const voiceSelect = document.getElementById("tts-voice");
+  const convoToggle = document.getElementById("convo-toggle");
 
   const providerById = Object.fromEntries(catalog.providers.map((p) => [p.id, p]));
 
@@ -71,75 +72,167 @@
     }
   });
 
-  function speak(text) {
-    if (!synth || !ttsToggle || !ttsToggle.checked || !text) return;
-    synth.cancel();
+  // --- Streaming TTS ------------------------------------------------------
+  // Speak complete sentences as they stream in (lower perceived latency), and
+  // drive a "mouth openness" value (window.SCENE_MIND_MOUTH) from word-boundary
+  // events so the 3D avatar animates roughly in sync with speech.
+  let spokenIdx = 0; // chars of the current answer already enqueued for speech
+
+  function ttsEnabled() {
+    return synth && ttsToggle && ttsToggle.checked;
+  }
+
+  function resetSpeech() {
+    spokenIdx = 0;
+    if (synth) synth.cancel();
+    window.SCENE_MIND_SPEAKING = false;
+    window.SCENE_MIND_MOUTH = 0;
+  }
+
+  function speakChunk(text) {
+    if (!ttsEnabled() || !text.trim()) return;
     const utter = new SpeechSynthesisUtterance(text);
     const chosen = voiceSelect && voices[Number(voiceSelect.value)];
     if (chosen) utter.voice = chosen;
     utter.rate = 1.0;
     utter.pitch = 1.0;
-    utter.onstart = () => {
-      window.SCENE_MIND_SPEAKING = true;
+    utter.onstart = () => { window.SCENE_MIND_SPEAKING = true; };
+    utter.onboundary = () => { window.SCENE_MIND_MOUTH = 1; }; // pulse per word
+    const finish = () => {
+      if (!synth.speaking && !synth.pending) {
+        window.SCENE_MIND_SPEAKING = false;
+        window.SCENE_MIND_MOUTH = 0;
+      }
     };
-    utter.onend = utter.onerror = () => {
-      window.SCENE_MIND_SPEAKING = false;
-    };
+    utter.onend = finish;
+    utter.onerror = finish;
     synth.speak(utter);
   }
 
-  // --- Speech-to-text: mic button fills + sends the prompt ---------------
+  // Speak any newly-completed sentences in `fullText`; on `done`, flush the rest.
+  function speakProgress(fullText, done) {
+    if (!ttsEnabled()) return;
+    const pending = fullText.slice(spokenIdx);
+    const sentence = /[^.!?\n]*[.!?\n]+/g;
+    let match;
+    let toSpeak = "";
+    let consumed = 0;
+    while ((match = sentence.exec(pending)) !== null) {
+      toSpeak += match[0];
+      consumed = sentence.lastIndex;
+    }
+    if (toSpeak) {
+      speakChunk(toSpeak);
+      spokenIdx += consumed;
+    }
+    if (done) {
+      const rest = fullText.slice(spokenIdx);
+      if (rest.trim()) speakChunk(rest);
+      spokenIdx = fullText.length;
+    }
+  }
+
+  // --- Speech-to-text + continuous conversation with barge-in -----------
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognition = null;
-  let listening = false;
+  let listening = false;       // recognition currently active
+  let conversationMode = false; // hands-free: keep listening, auto-send, barge-in
+  let stopRequested = false;    // user explicitly stopped (don't auto-restart)
+
+  function setMicUi(active) {
+    if (!micBtn) return;
+    micBtn.classList.toggle("listening", active);
+    micBtn.textContent = active ? "Stop" : "Mic";
+  }
+
+  function startListening() {
+    if (!recognition || listening) return;
+    stopRequested = false;
+    try {
+      recognition.start();
+    } catch (e) {
+      /* start() throws if already running; ignore */
+    }
+  }
+
+  function stopListening() {
+    stopRequested = true;
+    if (recognition && listening) recognition.stop();
+  }
 
   function initRecognition() {
-    if (!SpeechRecognition || !micBtn) {
+    if (!SpeechRecognition) {
       if (micBtn) micBtn.style.display = "none";
+      if (convoToggle) convoToggle.closest(".form-check")?.style.setProperty("display", "none");
       return;
     }
     recognition = new SpeechRecognition();
     recognition.lang = "en-US";
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
+
+    recognition.onstart = () => {
+      listening = true;
+      setMicUi(true);
+    };
+
+    // Barge-in: as soon as the user starts talking, cut off the avatar's speech.
+    recognition.onspeechstart = () => {
+      if (window.SCENE_MIND_SPEAKING) resetSpeech();
+    };
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map((r) => r[0].transcript)
-        .join("");
-      input.value = transcript;
-      if (event.results[event.results.length - 1].isFinal) {
-        const prompt = transcript.trim();
-        if (prompt) {
-          input.value = "";
-          sendMessage(prompt);
-        }
+      let interim = "";
+      let final = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += t;
+        else interim += t;
       }
-    };
-    recognition.onend = () => {
-      listening = false;
-      micBtn.classList.remove("listening");
-      micBtn.textContent = "Mic";
-    };
-    recognition.onerror = () => {
-      statusEl.textContent = "Voice input unavailable (mic permission?).";
+      // Ignore input captured while the avatar is speaking (likely its own echo),
+      // unless the user has barged in (which already cleared SPEAKING).
+      if (window.SCENE_MIND_SPEAKING) return;
+      input.value = (final || interim).trim();
+      const prompt = final.trim();
+      if (prompt.length > 1) {
+        input.value = "";
+        sendMessage(prompt);
+      }
     };
 
-    micBtn.addEventListener("click", () => {
-      if (listening) {
-        recognition.stop();
-        return;
+    recognition.onerror = (e) => {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        statusEl.textContent = "Microphone permission denied.";
+        conversationMode = false;
+        if (convoToggle) convoToggle.checked = false;
       }
-      if (synth) synth.cancel(); // don't capture our own TTS
-      try {
-        recognition.start();
-        listening = true;
-        micBtn.classList.add("listening");
-        micBtn.textContent = "Stop";
-      } catch (e) {
-        /* start() can throw if already running */
-      }
-    });
+    };
+
+    recognition.onend = () => {
+      listening = false;
+      setMicUi(false);
+      // In conversation mode, keep the mic open unless the user stopped it.
+      if (conversationMode && !stopRequested) startListening();
+    };
+
+    if (micBtn) {
+      micBtn.addEventListener("click", () => {
+        if (listening) stopListening();
+        else startListening();
+      });
+    }
+
+    if (convoToggle) {
+      convoToggle.addEventListener("change", () => {
+        conversationMode = convoToggle.checked;
+        if (conversationMode) {
+          statusEl.textContent = "Conversation mode on — just start talking.";
+          startListening();
+        } else {
+          stopListening();
+        }
+      });
+    }
   }
 
   function getCookie(name) {
@@ -214,16 +307,18 @@
       ctx.answer += payload.delta;
       ctx.pending.textContent = ctx.answer; // raw while streaming (fast)
       log.scrollTop = log.scrollHeight;
+      speakProgress(ctx.answer, false); // speak completed sentences as they arrive
     }
     if (payload.done) {
       ctx.answer = payload.answer || ctx.answer;
       statusEl.textContent = `via ${payload.provider} · ${payload.model}`;
       renderAnswer(ctx.pending, ctx.answer); // format once complete
-      speak(ctx.answer);
+      speakProgress(ctx.answer, true); // flush any trailing partial sentence
     }
   }
 
   async function sendMessage(prompt) {
+    resetSpeech(); // stop any prior/queued speech before the new reply
     addBubble("user", prompt);
     setBusy(true);
     const pending = addBubble("assistant", "…");

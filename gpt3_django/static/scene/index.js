@@ -224,16 +224,28 @@ canvas.addEventListener('dblclick', async () => {
   }
 });
 
-// Subtle "talking" motion while the assistant is speaking (window.SCENE_MIND_SPEAKING
-// is toggled by the chat client's TTS callbacks). Full viseme lip-sync would need
-// morph targets the models don't ship, so this conveys speech without them.
+// Talking motion while the assistant speaks. window.SCENE_MIND_SPEAKING gates it
+// and window.SCENE_MIND_MOUTH (0..1) spikes on each spoken word (from the TTS
+// boundary events), giving speech-synced movement. Full viseme lip-sync would
+// need morph targets the models don't ship; this approximates it without them.
+let mouth = 0; // smoothed openness
+
 function applySpeakingMotion() {
   if (!currentModel || currentModel.userData.baseScale === undefined) return;
   const base = currentModel.userData;
+
+  // Ease the smoothed mouth value toward the latest pulse, then decay it.
+  const target = window.SCENE_MIND_MOUTH || 0;
+  mouth += (target - mouth) * 0.35;
+  window.SCENE_MIND_MOUTH = target * 0.82; // decay the pulse between words
+
   if (window.SCENE_MIND_SPEAKING) {
     const t = performance.now() / 1000;
-    currentModel.position.y = base.baseY + Math.sin(t * 12) * 0.012;
-    currentModel.scale.setScalar(base.baseScale * (1 + Math.sin(t * 19) * 0.012));
+    const talk = 0.5 + mouth * 0.5; // amplitude tracks word pulses
+    currentModel.position.y = base.baseY + Math.sin(t * 12) * 0.012 * talk;
+    currentModel.scale.setScalar(base.baseScale * (1 + (0.010 + mouth * 0.020) * Math.abs(Math.sin(t * 22))));
+  } else if (mouth > 0.01) {
+    currentModel.scale.setScalar(base.baseScale * (1 + mouth * 0.02));
   } else {
     currentModel.position.y = base.baseY;
     currentModel.scale.setScalar(base.baseScale);
